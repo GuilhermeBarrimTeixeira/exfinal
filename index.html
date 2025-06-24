@@ -37,22 +37,22 @@
 
 <div id="page-main" class="hidden">
   <nav>
-    <a onclick="showTab('remedios')">Remédios</a>
+    <a onclick="showTab('remedios')">Medicações</a>
     <a onclick="showTab('consultas')">Consultas</a>
     <a onclick="showTab('relatorios')">Relatórios</a>
     <a onclick="doLogout()">Sair</a>
   </nav>
   <div id="tab-remedios" class="hidden">
-    <h2>Remédios</h2>
+    <h2>Medicações</h2>
     <label>Nome: <input id="med-nome"></label>
     <label>Horário (HH:MM): <input id="med-hora" type="time"></label>
-    <button onclick="addRemedio()">Adicionar Remédio</button>
+    <button onclick="addRemedio()">Adicionar Medicação</button>
     <div id="list-remedios"></div>
     <!-- LEGENDA -->
     <div class="legenda">
-      <p><span style="background:#ffffcc;">Amarelo:</span> próximo remédio</p>
-      <p><span style="background:#ffcccc;">Vermelho:</span> remédio não tomado (atrasado)</p>
-      <p><span style="background:#ccffcc;">Verde:</span> remédio já tomado</p>
+      <p><span style="background:#ffffcc;">Amarelo:</span> próxima medicação</p>
+      <p><span style="background:#ffcccc;">Vermelho:</span> medicação não aplicada (atrasada)</p>
+      <p><span style="background:#ccffcc;">Verde:</span> medicação já aplicada</p>
     </div>
   </div>
   <div id="tab-consultas" class="hidden">
