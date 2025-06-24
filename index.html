@@ -1,0 +1,234 @@
+<!DOCTYPE html> 
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestão do Grupo</title>
+<style>
+  body { font-family: Arial,sans-serif; background: #f9f9f9; padding: 1rem; }
+  .hidden { display: none; }
+  h2 { margin-top: 1rem; }
+  input, select, textarea, button { margin: 0.3rem 0; padding: 0.3rem; }
+  .item { border:1px solid #ccc; padding:0.5rem; margin:0.3rem 0; border-radius:4px; }
+  .vermelho { background:#ffcccc; }
+  .amarelo { background:#ffffcc; }
+  .verde { background:#ccffcc; }
+  nav a {margin-right:1rem; cursor:pointer; color:blue; text-decoration:underline;}
+  label { display:block; }
+  .legenda { font-size: 0.9rem; margin-top: 0.5rem; color:#333; }
+  .legenda p { margin:0.2rem 0; }
+  .legenda span { padding:2px 4px; border-radius:4px; }
+</style>
+</head>
+<body>
+<h1>Gestão do Grupo</h1>
+
+<div id="page-login">
+  <h2>Login</h2>
+  <label>Grupo: <input id="login-group"></label>
+  <label>Senha: <input id="login-pass" type="password"></label>
+  <button onclick="doLogin()">Entrar</button>
+  <h2>Cadastro</h2>
+  <label>Grupo: <input id="cad-group"></label>
+  <label>Senha: <input id="cad-pass" type="password"></label>
+  <button onclick="doCadastro()">Cadastrar</button>
+  <div id="login-msg"></div>
+</div>
+
+<div id="page-main" class="hidden">
+  <nav>
+    <a onclick="showTab('remedios')">Remédios</a>
+    <a onclick="showTab('consultas')">Consultas</a>
+    <a onclick="showTab('relatorios')">Relatórios</a>
+    <a onclick="doLogout()">Sair</a>
+  </nav>
+  <div id="tab-remedios" class="hidden">
+    <h2>Remédios</h2>
+    <label>Nome: <input id="med-nome"></label>
+    <label>Horário (HH:MM): <input id="med-hora" type="time"></label>
+    <button onclick="addRemedio()">Adicionar Remédio</button>
+    <div id="list-remedios"></div>
+    <!-- LEGENDA -->
+    <div class="legenda">
+      <p><span style="background:#ffffcc;">Amarelo:</span> próximo remédio</p>
+      <p><span style="background:#ffcccc;">Vermelho:</span> remédio não tomado (atrasado)</p>
+      <p><span style="background:#ccffcc;">Verde:</span> remédio já tomado</p>
+    </div>
+  </div>
+  <div id="tab-consultas" class="hidden">
+    <h2>Consultas</h2>
+    <label>Nome da consulta: <input id="cons-nome"></label>
+    <label>Data: <input id="cons-data" type="date"></label>
+    <label>Hora: <input id="cons-hora" type="time"></label>
+    <label>Local: <input id="cons-local"></label>
+    <button onclick="addConsulta()">Adicionar Consulta</button>
+    <div id="list-consultas"></div>
+  </div>
+  <div id="tab-relatorios" class="hidden">
+    <h2>Relatórios</h2>
+    <label>Nome: <input id="rel-nome"></label>
+    <label>Info: <textarea id="rel-info"></textarea></label>
+    <button onclick="addRelatorio()">Adicionar Relatório</button>
+    <div id="list-relatorios"></div>
+  </div>
+</div>
+
+<script>
+let currentGroup = null;
+let data = {};
+
+function doCadastro() {
+  const g = document.getElementById('cad-group').value.trim();
+  const p = document.getElementById('cad-pass').value.trim();
+  if (!g || !p) {alert('Preencha os campos');return;}
+  if (localStorage.getItem('grupo_' + g)) {alert('Grupo já existe');return;}
+  localStorage.setItem('grupo_' + g, p);
+  alert('Grupo cadastrado! Faça o login.');
+}
+
+function doLogin() {
+  const g = document.getElementById('login-group').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  if (localStorage.getItem('grupo_' + g) == p) {
+    currentGroup = g;
+    loadData();
+    history.pushState({page:'main'},"","?page=main");
+    showMain();
+  } else {
+    document.getElementById('login-msg').textContent = 'Grupo ou senha inválidos.';
+  }
+}
+
+function doLogout() {
+  currentGroup = null;
+  history.pushState({page:'login'},"","?page=login");
+  document.getElementById('page-main').classList.add('hidden');
+  document.getElementById('page-login').classList.remove('hidden');
+}
+
+function loadData() {
+  data = JSON.parse(localStorage.getItem('data_' + currentGroup)) || { remedios:[], consultas:[], relatorios:[] };
+  renderRemedios();
+  renderConsultas();
+  renderRelatorios();
+}
+
+function saveData() {
+  localStorage.setItem('data_' + currentGroup, JSON.stringify(data));
+}
+
+// Remédios
+function addRemedio() {
+  let nome = document.getElementById('med-nome').value.trim();
+  let hora = document.getElementById('med-hora').value.trim();
+  if (!nome || !hora) return;
+  data.remedios.push({ nome, hora, tomado:false });
+  saveData();
+  renderRemedios();
+}
+
+function renderRemedios() {
+  const list = document.getElementById('list-remedios'); list.innerHTML='';
+  let agora = new Date();
+  data.remedios.forEach((m,i)=>{
+    let div=document.createElement('div'); div.classList.add('item');
+    let [h,min]=m.hora.split(':').map(Number);
+    let remTime=new Date(); remTime.setHours(h,min,0,0);
+    if (m.tomado) {
+      div.classList.add('verde');
+    } else {
+      if (agora>remTime) div.classList.add('vermelho'); else div.classList.add('amarelo');
+    }
+    div.innerHTML=`<b>${m.nome}</b> - ${m.hora}
+      <button onclick="tomou(${i})">${m.tomado?'Já tomou':'Remédio já tomado'}</button>
+      <button onclick="editRem(${i})">Editar</button>
+      <button onclick="delRem(${i})">Deletar</button>`;
+    list.appendChild(div);
+  })
+}
+
+function tomou(i){ data.remedios[i].tomado=true; saveData(); renderRemedios(); }
+function delRem(i){ data.remedios.splice(i,1); saveData(); renderRemedios(); }
+function editRem(i){
+  let nome=prompt('Nome', data.remedios[i].nome);
+  let hora=prompt('Hora (HH:MM)', data.remedios[i].hora);
+  if(nome&&hora){ data.remedios[i].nome=nome; data.remedios[i].hora=hora; data.remedios[i].tomado=false; saveData(); renderRemedios(); }
+}
+
+// Consultas
+function addConsulta() {
+  let nome=document.getElementById('cons-nome').value.trim();
+  let dataC=document.getElementById('cons-data').value;
+  let hora=document.getElementById('cons-hora').value;
+  let local=document.getElementById('cons-local').value.trim();
+  if(!nome||!dataC||!hora||!local) return;
+  data.consultas.push({nome,data:dataC,hora,local});
+  saveData(); renderConsultas();
+}
+
+function renderConsultas() {
+  const list=document.getElementById('list-consultas'); list.innerHTML='';
+  let agora=new Date();
+  data.consultas.forEach((c,i)=>{
+    let div=document.createElement('div'); div.classList.add('item');
+    let dataHora=new Date(c.data+'T'+c.hora);
+    div.innerHTML=`<b>${c.nome}</b> - ${c.data} ${c.hora} (${c.local})
+      ${agora>dataHora?'<button onclick="doneCons('+i+')">Já consultei</button>':''}
+      <button onclick="editCons('+i+')">Editar</button>
+      <button onclick="delCons('+i+')">Deletar</button>`;
+    list.appendChild(div);
+  })
+}
+function doneCons(i){ data.consultas.splice(i,1); saveData(); renderConsultas(); }
+function delCons(i){ data.consultas.splice(i,1); saveData(); renderConsultas(); }
+function editCons(i){
+  const consulta=data.consultas[i];
+  document.getElementById('cons-nome').value=consulta.nome;
+  document.getElementById('cons-data').value=consulta.data;
+  document.getElementById('cons-hora').value=consulta.hora;
+  document.getElementById('cons-local').value=consulta.local;
+  delCons(i);
+}
+
+// Relatórios
+function addRelatorio() {
+  let nome=document.getElementById('rel-nome').value.trim();
+  let info=document.getElementById('rel-info').value.trim();
+  if(!nome||!info) return;
+  data.relatorios.push({nome,info});
+  saveData(); renderRelatorios();
+}
+function renderRelatorios() {
+  const list=document.getElementById('list-relatorios'); list.innerHTML='';
+  data.relatorios.forEach((r,i)=>{
+    let div=document.createElement('div'); div.classList.add('item');
+    div.innerHTML=`<b>${r.nome}</b>: ${r.info}
+      <button onclick="editRel(${i})">Editar</button>
+      <button onclick="delRel(${i})">Deletar</button>`;
+    list.appendChild(div);
+  })
+}
+function delRel(i){ data.relatorios.splice(i,1); saveData(); renderRelatorios(); }
+function editRel(i){
+  const relatorio=data.relatorios[i];
+  document.getElementById('rel-nome').value=relatorio.nome;
+  document.getElementById('rel-info').value=relatorio.info;
+  delRel(i);
+}
+
+// Nav
+function showTab(tab){
+  document.querySelectorAll('#page-main>div[id^=tab-]').forEach(e=>e.classList.add('hidden'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+}
+function showMain(){
+  document.getElementById('page-login').classList.add('hidden');
+  document.getElementById('page-main').classList.remove('hidden'); showTab('remedios');
+}
+// Histórico
+window.addEventListener('popstate',e=>{
+  if(!e.state||e.state.page==='login'){ doLogout(); }else{ showMain(); }
+});
+</script>
+</body>
+</html>
